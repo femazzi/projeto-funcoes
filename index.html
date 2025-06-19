@@ -1,0 +1,1176 @@
+</style>
+</head>
+<body>
+    <!-- Início do conteúdo visível da página -->
+    
+    <!-- Container principal que envolve todo o conteúdo -->
+    <div class="container">
+        <!-- Cabeçalho com título da aplicação -->
+        <div class="header">
+            <h1>Calculadora de Funções do 2º Grau</h1>
+        </div>
+
+        <!-- Conteúdo principal dividido em duas seções -->
+        <div class="main-content">
+            <!-- SEÇÃO DA ESQUERDA: Controles e entradas -->
+            <div class="input-section">
+                <!-- Grupo para inserir os coeficientes a, b, c -->
+                <div class="input-group">
+                    <label>Coeficientes da Função <br>
+                      y = ax² + bx + c</label>
+                    <!-- Grade com os três coeficientes -->
+                    <div class="coefficients">
+                        <!-- Campo para o coeficiente 'a' -->
+                        <div class="coeff-input">
+                            <label>a</label>
+                            <input type="number" id="coeff-a" value="1" step="any">
+                        </div>
+                        <!-- Campo para o coeficiente 'b' -->
+                        <div class="coeff-input">
+                            <label>b</label>
+                            <input type="number" id="coeff-b" value="0" step="any">
+                        </div>
+                        <!-- Campo para o coeficiente 'c' -->
+                        <div class="coeff-input">
+                            <label>c</label>
+                            <input type="number" id="coeff-c" value="0" step="any">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grupo para inserir função completa como texto -->
+                <div class="input-group">
+                    <label>Ou digite a função completa:</label>
+                    <!-- Campo onde o usuário pode digitar a função inteira -->
+                    <input type="text" id="function-input" placeholder="Ex: x^2 + 2x - 1 ou 2x^2 - 3x + 1">
+                </div>
+
+                <!-- Display que mostra a função atual -->
+                <div class="function-display" id="function-display">
+                    f(x) = x²
+                </div>
+
+                <!-- Controles de personalização e zoom -->
+                <div class="controls">
+                    <!-- Controle para escolher a cor da linha do gráfico -->
+                    <div class="color-control">
+                        <label>Cor da linha:</label>
+                        <input type="color" id="line-color" value="#4f46e5">
+                    </div>
+                    <!-- Botões para controlar o zoom do gráfico -->
+                    <div class="zoom-controls">
+                        <button class="btn-secondary" onclick="zoomIn()">Zoom +</button>
+                        <button class="btn-secondary" onclick="zoomOut()">Zoom -</button>
+                        <button class="btn-primary" onclick="resetZoom()">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Área onde aparecem avisos (como quando a = 0) -->
+                <div id="warning-section"></div>
+
+                <!-- Seção que mostra as propriedades matemáticas da função -->
+                <div class="properties" id="properties">
+                    <h3>Propriedades Matemáticas</h3>
+                    <!-- Conteúdo das propriedades é gerado dinamicamente pelo JavaScript -->
+                    <div id="properties-content">
+                        <div class="property"><strong>Domínio:</strong> ℝ (todos os números reais)</div>
+                        <div class="property"><strong>Tipo:</strong> Função Quadrática</div>
+                        <div class="property"><strong>Concavidade:</strong> Para cima (a > 0)</div>
+                        <div class="property"><strong>Vértice:</strong> (0, 0)</div>
+                        <div class="property"><strong>Intercepto Y:</strong> 0</div>
+                        <div class="property"><strong>Raízes:</strong> x = 0</div>
+                        <div class="property"><strong>Delta (Δ):</strong> 0</div>
+                        <div class="property"><strong>Imagem:</strong> [0, +∞)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO DA DIREITA: Gráfico -->
+            <div class="chart-section">
+                <h3 style="margin-bottom: 20px; color: #06b6d4;">Gráfico da Função</h3>
+                <!-- Container onde o gráfico será desenhado -->
+                <div class="chart-container">
+                    <!-- Canvas é onde o Chart.js desenha o gráfico -->
+                    <canvas id="function-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodapé da página -->
+        <div class="footer">
+            MovEx Development &copy;
+        </div>
+    </div>
+
+    <script>
+        /* INÍCIO DO CÓDIGO JAVASCRIPT - É o que faz a página funcionar */
+        
+        // Variáveis globais para controlar o gráfico e o zoom
+        let chart;              // Armazena o objeto do gráfico
+        let zoomLevel = 1;      // Nível atual do zoom (1 = normal)
+        const baseRange = 10;   // Alcance base do gráfico (de -10 a +10)
+
+        /**
+         * Função que inicializa o gráfico quando a página carrega
+         * É como preparar uma tela em branco para desenhar
+         */
+        function initChart() {
+            // Pega o elemento canvas onde o gráfico será desenhado
+            const ctx = document.getElementById('function-chart').getContext('2d');
+            
+            // Cria um novo gráfico usando a biblioteca Chart.js
+            chart = new Chart(ctx, {
+                type: 'line',       // Tipo de gráfico: linha
+                data: {
+                    datasets: [{
+                        // Primeiro conjunto de dados: a linha da função
+                        label: 'f(x)',
+                        data: [],                    // Pontos da função (será preenchido depois)
+                        borderColor: '#4f46e5',      // Cor da linha
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)', // Cor de preenchimento
+                        borderWidth: 3,              // Espessura da linha
+                        fill: false,                 // Não preencher área sob a curva
+                        tension: 0.1,                // Suavidade da curva
+                        pointRadius: 0               // Sem pontos visíveis na linha
+                    }, {
+                        // Segundo conjunto: pontos especiais (vértice, raízes, etc.)
+                        label: 'Pontos Especiais',
+                        data: [],                    // Pontos especiais (será preenchido depois)
+                        borderColor: '#ef4444',      // Cor vermelha
+                        backgroundColor: '#ef4444',   // Fundo vermelho
+                        borderWidth: 2,              // Espessura da borda
+                        pointRadius: 8,              // Tamanho dos pontos
+                        pointHoverRadius: 10,        // Tamanho quando mouse passa por cima
+                        showLine: false,             // Não conectar os pontos com linha
+                        pointStyle: 'circle'         // Formato circular dos pontos
+                    }]
+                },
+                options: {
+                    responsive: true,              // Adapta ao tamanho do container
+                    maintainAspectRatio: false,   // Permite alterar proporções
+                    plugins: {
+                        legend: {
+                            display: true,         // Mostra a legenda
+                            position: 'top'        // Posição da legenda
+                        },
+                        tooltip: {
+                            // Personaliza as dicas que aparecem ao passar o mouse
+                            callbacks: {
+                                label: function(context) {
+                                    // Se for um ponto especial, mostra coordenadas
+                                    if (context.datasetIndex === 1) {
+                                        return `Ponto: (${context.parsed.x.toFixed(2)}, ${context.parsed.y.toFixed(2)})`;
+                                    }
+                                    // Se for a função, mostra f(x) = y
+                                    return `f(${context.parsed.x.toFixed(2)}) = ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            // Configuração do eixo X (horizontal)
+                            type: 'linear',        // Escala linear
+                            display: true,         // Mostrar o eixo
+                            title: {
+                                display: true,
+                                text: 'x'          // Rótulo do eixo
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)' // Cor das linhas de grade
+                            },
+                            min: -baseRange,       // Valor mínimo
+                            max: baseRange         // Valor máximo
+                        },
+                        y: {
+                            // Configuração do eixo Y (vertical)
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'y'       // Rótulo do eixo
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            min: -baseRange,
+                            max: baseRange
+                        }
+                    },
+                    interaction: {
+                        intersect: false,          // Não precisa clicar exatamente no ponto
+                        mode: 'index'             // Mostra info do ponto mais próximo
+                    }
+                }
+            });
+        }
+
+        /**
+         * Função que analisa uma função digitada como texto e extrai os coeficientes
+         * Por exemplo: "2x^2 + 3x - 1" vira a=2, b=3, c=-1
+         */
+        function parseFunction(input) {
+            // Remove espaços e converte para minúsculo para facilitar a análise
+            input = input.toLowerCase().replace(/\s/g, '');
+            
+            // Variáveis para armazenar os coeficientes
+            let a = 0, b = 0, c = 0;
+            
+            // PROCURA PELO TERMO x² (ou x^2)
+            // Usa expressões regulares para encontrar padrões como "2x²", "-x^2", etc.
+            let x2Match = input.match(/([+-]?\d*(?:\.\d+)?)x\^?2|([+-]?\d*(?:\.\d+)?)x²/);
+            if (x2Match) {
+                let coeff = x2Match[1] || x2Match[2]; // Pega o coeficiente encontrado
+                if (coeff === '' || coeff === '+') a = 1;        // "x²" significa 1x²
+                else if (coeff === '-') a = -1;                  // "-x²" significa -1x²
+                else a = parseFloat(coeff);                      // Converte para número
+            }
+            
+            // Remove os termos x² já processados para não interferir na busca por x
+            input = input.replace(/[+-]?\d*(?:\.\d+)?x\^?2/g, '').replace(/[+-]?\d*(?:\.\d+)?x²/g, '');
+            
+            // PROCURA PELO TERMO x (mas não x²)
+            let xMatch = input.match(/([+-]?\d*(?:\.\d+)?)x(?!\^?2|²)/);
+            if (xMatch) {
+                let coeff = xMatch[1];
+                if (coeff === '' || coeff === '+') b = 1;        // "x" significa 1x
+                else if (coeff === '-') b = -1;                  // "-x" significa -1x
+                else b = parseFloat(coeff);                      // Converte para número
+            }
+            
+            // Remove os termos x já processados
+            input = input.replace(/[+-]?\d*(?:\.\d+)?x/g, '');
+            
+            // PROCURA PELO TERMO CONSTANTE (números soltos)
+            let constMatch = input.match(/([+-]?\d+(?:\.\d+)?)/);
+            if (constMatch) {
+                c = parseFloat(constMatch[1]); // Converte para número
+            }
+            
+            // Retorna os três coeficientes encontrados
+            return { a, b, c };
+        }
+
+        /**
+         * Função principal que atualiza tudo quando os coeficientes mudam
+         * É chamada sempre que o usuário digita algo nos campos
+         */
+        function updateFunction() {
+            // Pega os valores dos campos de entrada, convertendo para número
+            // Se o campo estiver vazio, usa 0 como padrão
+            const a = parseFloat(document.getElementById('coeff-a').value) || 0;
+            const b = parseFloat(document.getElementById('coeff-b').value) || 0;
+            const c = parseFloat(document.getElementById('coeff-c').value) || 0;
+            
+            // Atualiza diferentes partes da interface
+            updateFunctionDisplay(a, b, c);  // Atualiza o display da função
+            updateProperties(a, b, c);       // Atualiza as propriedades matemáticas
+            updateChart(a, b, c);           // Atualiza o gráfico
+        }
+
+        /**
+         * Atualiza o display que mostra a função escrita matematicamente
+         * Por exemplo: f(x) = 2x² + 3x - 1
+         */
+        function updateFunctionDisplay(a, b, c) {
+            let display = 'f(x) = '; // Sempre começa assim
+            
+            if (a === 0 && b === 0) {
+                // Se a = 0 e b = 0, é só uma constante
+                display += c.toString();
+            } else if (a === 0) {
+                // Se a = 0, é uma função linear (reta)
+                if (b === 1) display += 'x';           // 1x vira só "x"
+                else if (b === -1) display += '-x';    // -1x vira "-x"
+                else display += `${b}x`;               // Outros valores aparecem normalmente
+                
+                // Adiciona o termo constante se existir
+                if (c > 0) display += ` + ${c}`;       // Positivo: + c
+                else if (c < 0) display += ` - ${Math.abs(c)}`; // Negativo: - |c|
+            } else {
+                // Função quadrática normal
+                
+                // TERMO x²
+                if (a === 1) display += 'x²';          // 1x² vira só "x²"
+                else if (a === -1) display += '-x²';   // -1x² vira "-x²"
+                else display += `${a}x²`;              // Outros valores aparecem normalmente
+                
+                // TERMO x
+                if (b > 0) {
+                    if (b === 1) display += ' + x';           // +1x vira "+ x"
+                    else display += ` + ${b}x`;               // Outros positivos: "+ bx"
+                } else if (b < 0) {
+                    if (b === -1) display += ' - x';          // -1x vira "- x"
+                    else display += ` - ${Math.abs(b)}x`;     // Outros negativos: "- |b|x"
+                }
+                
+                // TERMO CONSTANTE
+                if (c > 0) display += ` + ${c}`;       // Positivo: + c
+                else if (c < 0) display += ` - ${Math.abs(c)}`; // Negativo: - |c|
+            }
+            
+            // Atualiza o texto no display
+            document.getElementById('function-display').textContent = display;
+        }
+
+        /**
+         * Calcula e exibe as propriedades matemáticas da função
+         * Como vértice, raízes, domínio, imagem, etc.
+         */
+        function updateProperties(a, b, c) {
+            // Pega os elementos onde vão aparecer os avisos e propriedades
+            const warningSection = document.getElementById('warning-section');
+            const propertiesContent = document.getElementById('properties-content');
+            
+            if (a === 0) {
+                // CASO ESPECIAL: Função linear (quando a = 0)
+                warningSection.innerHTML = '<div class="warning">⚠️ A função se tornou linear pois a = 0. </div>';
+                
+                // Propriedades específicas para função linear
+                propertiesContent.innerHTML = `
+                    <div class="property"><strong>Tipo:</strong> Função Linear</div>
+                    <div class="property"><strong>Domínio:</strong> ℝ (todos os números reais)</div>
+                    <div class="property"><strong>Imagem:</strong> ℝ (todos os números reais)</div>
+                    <div class="property"><strong>Intercepto Y:</strong> ${c}</div>
+                    <div class="property"><strong>Raiz:</strong> ${b !== 0 ? `x = ${(-c/b).toFixed(4)}` : (c === 0 ? 'Infinitas raízes' : 'Sem raiz real')}</div>
+                    <div class="property"><strong>Inclinação:</strong> ${b}</div>
+                `;
+            } else {
+                // CASO NORMAL: Função quadrática
+                warningSection.innerHTML = ''; // Remove avisos
+                
+                // CÁLCULOS IMPORTANTES:
+                const delta = b * b - 4 * a * c;        // Discriminante (Δ = b² - 4ac)
+                const vertexX = -b / (2 * a);           // Coordenada X do vértice
+                const vertexY = a * vertexX * vertexX + b * vertexX + c; // Coordenada Y do vértice
+                
+                // CÁLCULO DAS RAÍZES baseado no valor de delta
+                let roots = '';
+                if (delta > 0) {
+                    // Duas raízes reais diferentes
+                    const x1 = (-b + Math.sqrt(delta)) / (2 * a);
+                    const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+                    roots = `x₁ = ${x1.toFixed(4)}, x₂ = ${x2.toFixed(4)}`;
+                } else if (delta === 0) {
+                    // Uma raiz real (raiz dupla)
+                    const x = -b / (2 * a);
+                    roots = `x = ${x.toFixed(4)} (raiz dupla)`;
+                } else {
+                    // Nenhuma raiz real
+                    roots = 'Sem raízes reais';
+                }
+                
+                // Determina a concavidade baseada no sinal de 'a'
+                const concavity = a > 0 ? 'Para cima (a > 0)' : 'Para baixo (a < 0)';
+                
+                // Determina a imagem (conjunto de valores que f(x) pode assumir)
+                const image = a > 0 ? `[${vertexY.toFixed(4)}, +∞)` : `(-∞, ${vertexY.toFixed(4)}]`;
+                
+                // Monta o HTML com todas as propriedades
+                propertiesContent.innerHTML = `
+                    <div class="property"><strong>Tipo:</strong> Função Quadrática</div>
+                    <div class="property"><strong>Domínio:</strong> ℝ (todos os números reais)</div>
+                    <div class="property"><strong>Imagem:</strong> ${image}</div>
+                    <div class="property"><strong>Concavidade:</strong> ${concavity}</div>
+                    <div class="property"><strong>Vértice:</strong> (${vertexX.toFixed(4)}, ${vertexY.toFixed(4)})</div>
+                    <div class="property"><strong>Intercepto Y:</strong> ${c}</div>
+                    <div class="property"><strong>Raízes:</strong> ${roots}</div>
+                    <div class="property"><strong>Delta (Δ):</strong> ${delta.toFixed(4)}</div>
+                `;
+            }
+        }
+
+        /**
+         * Atualiza o gráfico com a nova função
+         * Calcula pontos da curva e pontos especiais
+         */
+        function updateChart(a, b, c) {
+            // Pega a cor escolhida pelo usuário
+            const color = document.getElementById('line-color').value;
+            
+            // Calcula o alcance baseado no zoom atual
+            const range = baseRange / zoomLevel;
+            
+            // Arrays para armazenar os pontos
+            const points = [];        // Pontos da curva da função
+            const specialPoints = []; // Pontos especiais (vértice, raízes, etc.)
+            
+            // GERA PONTOS PARA DESENHAR A CURVA
+            // Cria 200 pontos distribuídos ao longo do alcance
+            for (let x = -range; x <= range; x += range / 100) {
+                let y;
+                if (a === 0) {
+                    // Função linear: y = bx + c
+                    y = b * x + c;
+                } else {
+                    // Função quadrática: y = ax² + bx + c
+                    y = a * x * x + b * x + c;
+                }
+                points.push({ x: x, y: y }); // Adiciona o ponto à lista
+            }
+            
+            // CALCULA PONTOS ESPECIAIS
+            if (a !== 0) {
+                // Para funções quadráticas
+                
+                // VÉRTICE (ponto mais alto ou mais baixo da parábola)
+                const vertexX = -b / (2 * a);
+                const vertexY = a * vertexX * vertexX + b * vertexX + c;
+                specialPoints.push({ x: vertexX, y: vertexY });
+                
+                // RAÍZES (onde a função cruza o eixo X)
+                const delta = b * b - 4 * a * c;
+                if (delta >= 0) {
+                    // Se delta ≥ 0, existem raízes reais
+                    const x1 = (-b + Math.sqrt(delta)) / (2 * a);
+                    const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+                    specialPoints.push({ x: x1, y: 0 }); // Primeira raiz
+                    if (delta > 0) {
+                        specialPoints.push({ x: x2, y: 0 }); // Segunda raiz (se diferente)
+                    }
+                }
+            }
+            
+            // INTERCEPTO Y (onde a função cruza o eixo Y)
+            // Sempre no ponto (0, c)
+            specialPoints.push({ x: 0, y: c });
+            
+            // INTERCEPTO X para função linear
+            if (a === 0 && b !== 0) {
+                // Para y = bx + c, a raiz é x = -c/b
+                specialPoints.push({ x: -c/b, y: 0 });
+            }
+            
+            // ATUALIZA O GRÁFICO com os novos dados
+            chart.data.datasets[0].data = points;                    // Pontos da curva
+            chart.data.datasets[0].borderColor = color;              // Cor da linha
+            chart.data.datasets[0].backgroundColor = color + '20';   // Cor de preenchimento
+            chart.data.datasets[1].data = specialPoints;             // Pontos especiais
+            
+            // AJUSTA OS EIXOS para o zoom atual
+            chart.options.scales.x.min = -range;
+            chart.options.scales.x.max = range;
+            chart.options.scales.y.min = -range;
+            chart.options.scales.y.max = range;
+            
+            // Redesenha o gráfico com as mudanças
+            chart.update();
+        }
+
+        /**
+         * Funções para controlar o zoom do gráfico
+         */
+        
+        // Aumenta o zoom (aproxima)
+        function zoomIn() {
+            zoomLevel *= 1.5;      // Multiplica o zoom por 1.5
+            updateFunction();      // Atualiza o gráfico
+        }
+
+        // Diminui o zoom (afasta)
+        function zoomOut() {
+            zoomLevel /= 1.5;      // Divide o zoom por 1.5
+            updateFunction();      // Atualiza o gráfico
+        }
+
+        // Reseta o zoom para o padrão
+        function resetZoom() {
+            zoomLevel = 1;         // Volta ao zoom original
+            updateFunction();      // Atualiza o gráfico
+        }
+
+        
+        // Quando o usuário digita no campo do coeficiente 'a'
+        document.getElementById('coeff-a').addEventListener('input', updateFunction);
+        
+        // Quando o usuário digita no campo do coeficiente 'b'
+        document.getElementById('coeff-b').addEventListener('input', updateFunction);
+        
+        // Quando o usuário digita no campo do coeficiente 'c'
+        document.getElementById('coeff-c').addEventListener('input', updateFunction);
+        
+        // Quando o usuário muda a cor da linha
+        document.getElementById('line-color').addEventListener('change', updateFunction);
+
+        // Quando o usuário digita uma função completa
+        document.getElementById('function-input').addEventListener('input', function() {
+            const input = this.value; // Pega o texto digitado
+            if (input.trim()) {
+                const coeffs = parseFunction(input);
+                document.getElementById('coeff-a').value = coeffs.a;
+                document.getElementById('coeff-b').value = coeffs.b;
+                document.getElementById('coeff-c').value = coeffs.c;
+                updateFunction();
+            }
+        });
+
+        // Event listeners - MONITORA QUANDO O USUÁRIO MUDA ALGUM DOS CAMPOS
+        document.getElementById('coeff-a').addEventListener('input', updateFunction);
+        document.getElementById('coeff-b').addEventListener('input', updateFunction);
+        document.getElementById('coeff-c').addEventListener('input', updateFunction);
+        document.getElementById('line-color').addEventListener('change', updateFunction);
+
+        document.getElementById('function-input').addEventListener('input', function() {
+            const input = this.value;
+            if (input.trim()) {
+                const coeffs = parseFunction(input);
+                document.getElementById('coeff-a').value = coeffs.a;
+                document.getElementById('coeff-b').value = coeffs.b;
+                document.getElementById('coeff-c').value = coeffs.c;
+                updateFunction();
+            }
+        });
+
+        // Inicializar com animações nos elementos
+        window.addEventListener('load', function() {
+            // Adicionar delays de animação para elementos
+            const inputGroups = document.querySelectorAll('.input-group');
+            inputGroups.forEach((group, index) => {
+                group.style.setProperty('--delay', index + 1);
+            });
+
+            const coeffInputs = document.querySelectorAll('.coeff-input');
+            coeffInputs.forEach((input, index) => {
+                input.style.setProperty('--index', index);
+            });
+
+            initChart();
+            updateFunction();
+            
+            // Adicionar efeito de digitação no título
+            setTimeout(() => {
+                const title = document.querySelector('.header h1');
+                if (title) {
+                    title.style.animation = 'titlePulse 2s ease-in-out infinite alternate, glow 3s ease-in-out infinite alternate';
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html><!DOCTYPE html>
+<!-- Este é o início de um documento HTML, que é a linguagem usada para criar páginas web -->
+<html lang="pt-BR">
+<!-- A tag html define que esta página está em português brasileiro -->
+
+<head>
+    <!-- A seção head contém informações sobre a página que não aparecem diretamente na tela -->
+    <meta charset="UTF-8">
+    <!-- Define o conjunto de caracteres para exibir corretamente acentos e símbolos -->
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Faz a página se adaptar a diferentes tamanhos de tela (celular, tablet, desktop) -->
+    
+    <title>Calculadora de Funções Quadráticas</title>
+    <!-- O título que aparece na aba do navegador -->
+    
+    <!-- Importação da biblioteca Chart.js para criar gráficos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        /* AQUI COMEÇAM OS ESTILOS CSS - É o que deixa a página bonita */
+        
+        /* Importação de fontes do Google Fonts para deixar o texto mais elegante */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        /* Resetar estilos padrão do navegador */
+        * {
+            margin: 0;           /* Remove margens padrão */
+            padding: 0;          /* Remove espaçamentos padrão */
+            box-sizing: border-box; /* Facilita o cálculo de tamanhos */
+        }
+
+        /* Estilo do corpo da página */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* Define a fonte */
+            background: linear-gradient(135deg, #0c0a1f 0%, #1a0833 25%, #2d1b69 50%, #1e293b 75%, #0f172a 100%); /* Fundo com gradiente colorido */
+            min-height: 100vh;    /* Altura mínima da tela inteira */
+            padding: 20px;        /* Espaçamento interno */
+            animation: gradientShift 15s ease infinite; /* Animação do fundo */
+            position: relative;   /* Permite posicionamento de elementos filhos */
+            overflow-x: hidden;   /* Esconde barra de rolagem horizontal */
+        }
+
+        /* Efeito visual de fundo com círculos coloridos */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            pointer-events: none; /* Não interfere com cliques */
+            z-index: -1;          /* Fica atrás de todos os outros elementos */
+        }
+
+        /* Animação que faz o fundo se mover suavemente */
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Container principal que centraliza todo o conteúdo */
+        .container {
+            max-width: 1400px;     /* Largura máxima */
+            margin: 0 auto;        /* Centraliza horizontalmente */
+            background: rgba(15, 23, 42, 0.85); /* Fundo semi-transparente */
+            border-radius: 24px;   /* Bordas arredondadas */
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1); /* Sombras para profundidade */
+            backdrop-filter: blur(20px); /* Efeito de desfoque no fundo */
+            overflow: hidden;      /* Esconde conteúdo que sai das bordas */
+            animation: containerGlow 3s ease-in-out infinite alternate; /* Animação de brilho */
+            border: 1px solid rgba(59, 130, 246, 0.2); /* Borda colorida sutil */
+        }
+
+        /* Animação que faz o container brilhar suavemente */
+        @keyframes containerGlow {
+            0% { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.2); }
+            100% { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(147, 51, 234, 0.3); }
+        }
+
+        /* Cabeçalho da página */
+        .header {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4); /* Fundo gradiente colorido */
+            color: white;          /* Texto branco */
+            padding: 40px;         /* Espaçamento interno */
+            text-align: center;    /* Centraliza o texto */
+            position: relative;    /* Permite efeitos especiais */
+            overflow: hidden;      /* Esconde elementos que saem das bordas */
+        }
+
+        /* Efeito de brilho que passa pelo cabeçalho */
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: headerShine 3s infinite; /* Animação de brilho */
+        }
+
+        /* Animação do brilho passando da esquerda para direita */
+        @keyframes headerShine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Título principal */
+        .header h1 {
+            font-size: 3rem;      /* Tamanho grande da fonte */
+            margin-bottom: 15px;   /* Espaço abaixo */
+            font-weight: 800;      /* Texto bem grosso */
+            background: linear-gradient(135deg, #ffffff, #e0e7ff, #c7d2fe); /* Gradiente no texto */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text; /* Aplica o gradiente ao texto */
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra no texto */
+            animation: titlePulse 2s ease-in-out infinite alternate; /* Animação de pulsação */
+            position: relative;
+            z-index: 1;           /* Fica na frente de outros elementos */
+        }
+
+        /* Animação que faz o título "respirar" */
+        @keyframes titlePulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.02); }
+        }
+
+        /* Subtítulo */
+        .header p {
+            font-size: 1.2rem;    /* Tamanho médio da fonte */
+            opacity: 0.95;        /* Levemente transparente */
+            font-weight: 400;     /* Peso normal da fonte */
+            letter-spacing: 0.5px; /* Espaçamento entre letras */
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Layout principal dividido em duas colunas */
+        .main-content {
+            display: grid;                    /* Usa layout de grade */
+            grid-template-columns: 1fr 2fr;   /* Primeira coluna menor, segunda maior */
+            gap: 30px;                        /* Espaço entre colunas */
+            padding: 30px;                    /* Espaçamento interno */
+            background: rgba(15, 23, 42, 0.3); /* Fundo semi-transparente */
+        }
+
+        /* Seção dos controles de entrada */
+        .input-section {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); /* Fundo gradiente */
+            padding: 30px;         /* Espaçamento interno */
+            border-radius: 20px;   /* Bordas bem arredondadas */
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(59, 130, 246, 0.1); /* Sombras para profundidade */
+            backdrop-filter: blur(10px); /* Desfoque no fundo */
+            border: 1px solid rgba(255, 255, 255, 0.05); /* Borda sutil */
+            animation: cardHover 0.3s ease; /* Animação de hover */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transição suave */
+        }
+
+        /* Efeito quando o mouse passa por cima da seção */
+        .input-section:hover {
+            transform: translateY(-2px); /* Move para cima */
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(59, 130, 246, 0.2); /* Sombra mais forte */
+        }
+
+        /* Grupos de entrada (conjuntos de campos relacionados) */
+        .input-group {
+            margin-bottom: 30px;   /* Espaço abaixo */
+            animation: slideInUp 0.6s ease forwards; /* Animação de entrada */
+            opacity: 0;           /* Começa invisível */
+            animation-delay: calc(var(--delay) * 0.1s); /* Delay baseado em variável CSS */
+        }
+
+        /* Animação que faz os elementos aparecerem de baixo para cima */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Rótulos dos campos de entrada */
+        .input-group label {
+            display: block;        /* Ocupa toda a largura */
+            margin-bottom: 12px;   /* Espaço abaixo */
+            font-weight: 600;      /* Texto mais grosso */
+            color: #e2e8f0;        /* Cor clara */
+            font-size: 1.1rem;     /* Tamanho da fonte */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Sombra no texto */
+            letter-spacing: 0.3px; /* Espaçamento entre letras */
+        }
+
+        /* Grade para os coeficientes a, b, c */
+        .coefficients {
+            display: grid;                      /* Layout de grade */
+            grid-template-columns: repeat(3, 1fr); /* 3 colunas iguais */
+            gap: 20px;                          /* Espaço entre itens */
+            margin-bottom: 25px;                /* Espaço abaixo */
+        }
+
+        /* Container para cada coeficiente */
+        .coeff-input {
+            display: flex;         /* Layout flexível */
+            flex-direction: column; /* Itens em coluna */
+            align-items: center;   /* Centraliza horizontalmente */
+            animation: bounceIn 0.8s ease forwards; /* Animação de entrada */
+            animation-delay: calc(var(--index) * 0.1s); /* Delay baseado no índice */
+            opacity: 0;           /* Começa invisível */
+        }
+
+        /* Animação de entrada dos coeficientes com efeito de salto */
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) translateY(-50px);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Rótulos dos coeficientes (a, b, c) */
+        .coeff-input label {
+            font-size: 1.4rem;     /* Tamanho grande */
+            font-weight: 700;      /* Bem grosso */
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6); /* Gradiente colorido */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text; /* Aplica gradiente ao texto */
+            margin-bottom: 8px;    /* Espaço abaixo */
+            text-transform: uppercase; /* Letras maiúsculas */
+            letter-spacing: 1px;   /* Espaçamento entre letras */
+        }
+
+        /* Estilo dos campos de entrada de número e texto */
+        input[type="number"], input[type="text"] {
+            width: 100%;           /* Largura total */
+            padding: 16px;         /* Espaçamento interno */
+            border: 2px solid rgba(59, 130, 246, 0.2); /* Borda colorida sutil */
+            border-radius: 12px;   /* Bordas arredondadas */
+            font-size: 1.1rem;     /* Tamanho da fonte */
+            font-weight: 500;      /* Peso da fonte */
+            background: rgba(30, 41, 59, 0.8); /* Fundo escuro semi-transparente */
+            color: #e2e8f0;        /* Texto claro */
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Transição suave */
+            backdrop-filter: blur(10px); /* Desfoque no fundo */
+            font-family: 'JetBrains Mono', monospace; /* Fonte monoespaçada para números */
+        }
+
+        /* Efeito quando o campo está focado (sendo editado) */
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;         /* Remove contorno padrão */
+            border-color: #3b82f6; /* Borda azul */
+            box-shadow: 
+                0 0 0 4px rgba(59, 130, 246, 0.15),
+                0 8px 25px rgba(59, 130, 246, 0.2); /* Brilho azul */
+            transform: translateY(-2px); /* Move para cima */
+            background: rgba(30, 41, 59, 0.95); /* Fundo mais opaco */
+        }
+
+        /* Efeito quando o mouse passa por cima dos campos */
+        input[type="number"]:hover:not(:focus), input[type="text"]:hover:not(:focus) {
+            border-color: rgba(59, 130, 246, 0.4); /* Borda mais colorida */
+            transform: translateY(-1px); /* Move levemente para cima */
+        }
+
+        /* Display da função matemática */
+        .function-display {
+            background: linear-gradient(135deg, #1e293b, #0f172a); /* Fundo gradiente escuro */
+            color: #10b981;        /* Texto verde */
+            padding: 20px;         /* Espaçamento interno */
+            border-radius: 12px;   /* Bordas arredondadas */
+            font-family: 'JetBrains Mono', monospace; /* Fonte monoespaçada */
+            font-size: 1.4rem;     /* Tamanho grande */
+            font-weight: 600;      /* Texto grosso */
+            text-align: center;    /* Centralizado */
+            margin: 20px 0;        /* Margem vertical */
+            border: 2px solid rgba(16, 185, 129, 0.3); /* Borda verde */
+            box-shadow: 
+                0 8px 25px rgba(16, 185, 129, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1); /* Sombras */
+            animation: glow 2s ease-in-out infinite alternate; /* Animação de brilho */
+            letter-spacing: 1px;   /* Espaçamento entre letras */
+        }
+
+        /* Animação de brilho para o display da função */
+        @keyframes glow {
+            0% { 
+                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            }
+            100% { 
+                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        /* Container dos controles (cor e zoom) */
+        .controls {
+            display: flex;         /* Layout flexível */
+            gap: 20px;            /* Espaço entre itens */
+            align-items: center;   /* Alinhamento vertical */
+            flex-wrap: wrap;       /* Quebra linha se necessário */
+            margin-bottom: 25px;   /* Espaço abaixo */
+            animation: slideInLeft 0.8s ease forwards; /* Animação de entrada */
+            opacity: 0;           /* Começa invisível */
+            animation-delay: 0.3s; /* Delay da animação */
+        }
+
+        /* Animação de entrada da esquerda para direita */
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Controle de cor */
+        .color-control {
+            display: flex;         /* Layout flexível */
+            align-items: center;   /* Alinhamento vertical */
+            gap: 12px;            /* Espaço entre itens */
+            padding: 12px 18px;    /* Espaçamento interno */
+            background: rgba(30, 41, 59, 0.6); /* Fundo semi-transparente */
+            border-radius: 12px;   /* Bordas arredondadas */
+            border: 1px solid rgba(59, 130, 246, 0.2); /* Borda colorida */
+            transition: all 0.3s ease; /* Transição suave */
+        }
+
+        /* Efeito hover no controle de cor */
+        .color-control:hover {
+            background: rgba(30, 41, 59, 0.8); /* Fundo mais opaco */
+            border-color: rgba(59, 130, 246, 0.4); /* Borda mais colorida */
+            transform: translateY(-2px); /* Move para cima */
+        }
+
+        /* Rótulo do controle de cor */
+        .color-control label {
+            font-weight: 600;      /* Texto grosso */
+            color: #e2e8f0;        /* Cor clara */
+            font-size: 0.95rem;    /* Tamanho da fonte */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Sombra no texto */
+        }
+
+        /* Campo de seleção de cor */
+        input[type="color"] {
+            width: 50px;           /* Largura fixa */
+            height: 50px;          /* Altura fixa */
+            border: none;          /* Sem borda */
+            border-radius: 12px;   /* Bordas arredondadas */
+            cursor: pointer;       /* Cursor de mão */
+            transition: all 0.3s ease; /* Transição suave */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Sombra */
+        }
+
+        /* Efeito hover no seletor de cor */
+        input[type="color"]:hover {
+            transform: scale(1.1); /* Aumenta o tamanho */
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* Sombra mais forte */
+        }
+
+        /* Container dos controles de zoom */
+        .zoom-controls {
+            display: flex;         /* Layout flexível */
+            gap: 12px;            /* Espaço entre botões */
+        }
+
+        /* Estilo base dos botões */
+        button {
+            padding: 14px 24px;    /* Espaçamento interno */
+            border: none;          /* Sem borda */
+            border-radius: 12px;   /* Bordas arredondadas */
+            font-weight: 600;      /* Texto grosso */
+            font-size: 1rem;       /* Tamanho da fonte */
+            cursor: pointer;       /* Cursor de mão */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transição suave */
+            text-transform: uppercase; /* Letras maiúsculas */
+            letter-spacing: 0.5px; /* Espaçamento entre letras */
+            position: relative;    /* Permite efeitos especiais */
+            overflow: hidden;      /* Esconde elementos que saem */
+        }
+
+        /* Efeito de brilho que passa pelos botões */
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s; /* Transição do efeito */
+        }
+
+        /* Ativa o efeito de brilho quando o mouse passa por cima */
+        button:hover::before {
+            left: 100%;
+        }
+
+        /* Botão primário (azul) */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); /* Gradiente azul */
+            color: white;          /* Texto branco */
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); /* Sombra azul */
+        }
+
+        /* Efeito hover no botão primário */
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af); /* Gradiente mais escuro */
+            transform: translateY(-3px); /* Move para cima */
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4); /* Sombra mais forte */
+        }
+
+        /* Efeito quando o botão primário é clicado */
+        .btn-primary:active {
+            transform: translateY(-1px); /* Move menos para cima */
+        }
+
+        /* Botão secundário (cinza) */
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563); /* Gradiente cinza */
+            color: white;          /* Texto branco */
+            box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3); /* Sombra cinza */
+        }
+
+        /* Efeito hover no botão secundário */
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #4b5563, #374151); /* Gradiente mais escuro */
+            transform: translateY(-3px); /* Move para cima */
+            box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4); /* Sombra mais forte */
+        }
+
+        /* Seção das propriedades matemáticas */
+        .properties {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.1)); /* Fundo gradiente sutil */
+            padding: 25px;         /* Espaçamento interno */
+            border-radius: 16px;   /* Bordas arredondadas */
+            margin-top: 25px;      /* Espaço acima */
+            border: 1px solid rgba(6, 182, 212, 0.3); /* Borda colorida */
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.1); /* Sombra colorida */
+            animation: slideInUp 1s ease forwards; /* Animação de entrada */
+            opacity: 0;           /* Começa invisível */
+            animation-delay: 0.5s; /* Delay da animação */
+        }
+
+        /* Título da seção de propriedades */
+        .properties h3 {
+            color: #06b6d4;        /* Cor ciano */
+            margin-bottom: 20px;   /* Espaço abaixo */
+            font-size: 1.4rem;     /* Tamanho da fonte */
+            font-weight: 700;      /* Texto bem grosso */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Sombra no texto */
+            letter-spacing: 0.5px; /* Espaçamento entre letras */
+        }
+
+        /* Cada propriedade individual */
+        .property {
+            margin-bottom: 15px;   /* Espaço abaixo */
+            padding: 12px 16px;    /* Espaçamento interno */
+            background: rgba(30, 41, 59, 0.6); /* Fundo semi-transparente */
+            border-radius: 10px;   /* Bordas arredondadas */
+            border: 1px solid rgba(59, 130, 246, 0.1); /* Borda sutil */
+            color: #e2e8f0;        /* Texto claro */
+            font-weight: 500;      /* Peso da fonte */
+            transition: all 0.3s ease; /* Transição suave */
+            backdrop-filter: blur(5px); /* Desfoque no fundo */
+        }
+
+        /* Efeito hover nas propriedades */
+        .property:hover {
+            background: rgba(30, 41, 59, 0.8); /* Fundo mais opaco */
+            border-color: rgba(59, 130, 246, 0.3); /* Borda mais colorida */
+            transform: translateX(5px); /* Move para a direita */
+        }
+
+        /* Texto em negrito nas propriedades */
+        .property strong {
+            color: #06b6d4;        /* Cor ciano */
+            font-weight: 700;      /* Bem grosso */
+        }
+
+        /* Seção do gráfico */
+        .chart-section {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); /* Fundo gradiente */
+            padding: 30px;         /* Espaçamento interno */
+            border-radius: 20px;   /* Bordas arredondadas */
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(147, 51, 234, 0.1); /* Sombras */
+            backdrop-filter: blur(10px); /* Desfoque no fundo */
+            border: 1px solid rgba(255, 255, 255, 0.05); /* Borda sutil */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transição suave */
+            animation: slideInRight 0.8s ease forwards; /* Animação de entrada */
+            opacity: 0;           /* Começa invisível */
+            animation-delay: 0.2s; /* Delay da animação */
+        }
+
+        /* Animação de entrada da direita para esquerda */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Efeito hover na seção do gráfico */
+        .chart-section:hover {
+            transform: translateY(-2px); /* Move para cima */
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(147, 51, 234, 0.2); /* Sombras mais fortes */
+        }
+
+        /* Título da seção do gráfico */
+        .chart-section h3 {
+            margin-bottom: 25px;   /* Espaço abaixo */
+            color: #e2e8f0;        /* Cor clara */
+            font-size: 1.4rem;     /* Tamanho da fonte */
+            font-weight: 700;      /* Texto grosso */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Sombra no texto */
+            letter-spacing: 0.5px; /* Espaçamento entre letras */
+        }
+
+        /* Container do gráfico */
+        .chart-container {
+            position: relative;    /* Posicionamento relativo */
+            height: 500px;         /* Altura fixa */
+            margin-bottom: 20px;   /* Espaço abaixo */
+            border-radius: 12px;   /* Bordas arredondadas */
+            overflow: hidden;      /* Esconde conteúdo que sai */
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2); /* Sombra interna */
+        }
+
+        /* Mensagem de aviso */
+        .warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2)); /* Fundo amarelo gradiente */
+            color: #fbbf24;        /* Texto amarelo */
+            padding: 18px;         /* Espaçamento interno */
+            border-radius: 12px;   /* Bordas arredondadas */
+            margin-bottom: 25px;   /* Espaço abaixo */
+            border: 1px solid rgba(245, 158, 11, 0.3); /* Borda amarela */
+            font-weight: 600;      /* Texto grosso */
+            animation: warningPulse 2s ease-in-out infinite alternate; /* Animação de pulsação */
+            backdrop-filter: blur(5px); /* Desfoque no fundo */
+        }
+
+        /* Animação de pulsação para avisos */
+        @keyframes warningPulse {
+            0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+            100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+        }
+
+        /* Rodapé da página */
+        .footer {
+            text-align: center;    /* Centraliza o texto */
+            padding: 20px;         /* Espaçamento interno */
+            color: #94a3b8;        /* Cor cinza clara */
+            font-size: 0.9rem;     /* Tamanho pequeno da fonte */
+            font-weight: 400;      /* Peso normal */
+            background: rgba(15, 23, 42, 0.5); /* Fundo semi-transparente */
+            border-top: 1px solid rgba(255, 255, 255, 0.05); /* Borda superior sutil */
+        }
+
+        /* ESTILOS RESPONSIVOS - Adaptam a página para diferentes tamanhos de tela */
+        
+        /* Para tablets e telas menores que 1024px */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr; /* Uma coluna só */
+            }
+            
+            .header h1 {
+                font-size: 2rem;    /* Título menor */
+            }
+        }
+
+        /* Para celulares e telas menores que 768px */
+        @media (max-width: 768px) {
+            .coefficients {
+                grid-template-columns: 1fr; /* Coeficientes em coluna única */
+            }
+            
+            .controls {
+                flex-direction: column; /* Controles em coluna */
+                align-items: stretch;   /* Estica os itens */
+            }
+            
+            .zoom-controls {
+                justify-content: center; /* Centraliza botões de zoom */
+            }
+        }
+
+
+        /*      MovEx Development      */
+        /*         Felipe Mazzi        */
+        /*        Gustavo Kyoshi       */
+        /*       Rafaela Candido       */
+        /*         Ryan Andrade        */
