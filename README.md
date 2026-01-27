@@ -71,10 +71,6 @@ Calculadora interativa de funções quadráticas desenvolvida como projeto escol
 - **Reset**: Volta ao zoom padrão
 - **Cor da linha**: Clique no seletor de cor para personalizar
 
-## 🎯 Fluxograma de Funcionamento
-
-O projeto inclui um fluxograma detalhado (`Fluxograma-Funcoes.png`) que documenta toda a lógica de processamento da calculadora, desde a entrada de dados até a exibição dos resultados.
-
 ### Principais Etapas do Fluxo:
 1. **Entrada de dados**: Captura dos coeficientes ou parsing da função
 2. **Validação**: Verificação se é uma função quadrática válida (a ≠ 0)
