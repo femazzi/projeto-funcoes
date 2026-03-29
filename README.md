@@ -127,8 +127,8 @@ f(x) = ax² + bx + c, onde a ≠ 0
 
 ```bash
 # Se estiver usando Git
-git clone [url-do-repositorio]
-cd [nome-do-projeto]
+git clone https://github.com/femazzi/projeto-funcoes
+cd projeto-funcoes
 ```
 
 Depois, simplesmente abra o arquivo `index.html` no navegador.
